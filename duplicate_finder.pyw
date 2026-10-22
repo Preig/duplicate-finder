@@ -81,9 +81,11 @@ class App:
                  font=(UI_FONT, 11)).pack(anchor="w", pady=(3, 0))
         main = ttk.Frame(self.root, padding=(20, 12))
         main.pack(fill="both", expand=True)
+        main.columnconfigure(0, weight=1)
+        main.rowconfigure(4, weight=1, minsize=100)
 
         folders = ttk.Frame(main)
-        folders.pack(fill="x")
+        folders.grid(row=0, column=0, sticky="ew")
         ttk.Label(folders, text="1   CHOOSE FOLDERS", font=(TITLE_FONT, 10)).pack(anchor="w", pady=(0, 5))
         folder_row = ttk.Frame(folders)
         folder_row.pack(fill="x")
@@ -102,7 +104,7 @@ class App:
         self.remove_button = ttk.Button(buttons, text="Remove folder", command=self.remove_folder)
         self.remove_button.pack(fill="x", pady=(5, 0))
         opts = ttk.Frame(main)
-        opts.pack(fill="x", pady=(9, 8))
+        opts.grid(row=1, column=0, sticky="ew", pady=(9, 8))
         ttk.Label(opts, text="Minimum size").pack(side="left")
         self.minimum_box = ttk.Combobox(opts, textvariable=self.minimum, values=list(MINIMUMS), state="readonly", width=19)
         self.minimum_box.pack(side="left", padx=(7, 18))
@@ -115,7 +117,7 @@ class App:
         self.scan_button.pack(side="right", padx=(10, 7))
 
         cards = ttk.Frame(main)
-        cards.pack(fill="x", pady=(0, 10))
+        cards.grid(row=2, column=0, sticky="ew", pady=(0, 10))
         labels = ("FILES FOUND", "DUPLICATE MATCHES", "EXTRA COPIES", "EXTRA LOGICAL SIZE")
         for i, label in enumerate(labels):
             card = tk.Frame(cards, bg="white", padx=14, pady=8)
@@ -125,7 +127,7 @@ class App:
             tk.Label(card, textvariable=self.metric_values[i], bg="white", fg="#087e82", font=(TITLE_FONT, 21)).pack(anchor="w")
 
         tools = ttk.Frame(main)
-        tools.pack(fill="x", pady=(0, 6))
+        tools.grid(row=3, column=0, sticky="ew", pady=(0, 6))
         ttk.Label(tools, text="2   REVIEW", font=(TITLE_FONT, 10)).pack(side="left", padx=(0, 14))
         ttk.Label(tools, text="Group by").pack(side="left")
         self.view_box = ttk.Combobox(tools, textvariable=self.view, values=["Matching content", "Folder"], state="readonly", width=18)
@@ -139,7 +141,7 @@ class App:
         self.export_button.pack(side="right")
 
         table_frame = ttk.Frame(main)
-        table_frame.pack(fill="both", expand=True)
+        table_frame.grid(row=4, column=0, sticky="nsew")
         self.tree = ttk.Treeview(table_frame, columns=("mark", "match", "size", "folder"), selectmode="extended")
         self.tree.heading("#0", text="Name / group")
         self.tree.heading("mark", text="Delete?")
@@ -164,9 +166,9 @@ class App:
         self.tree.bind("<space>", self.toggle_highlighted)
         self.tree.bind("<<TreeviewSelect>>", self.show_detail)
 
-        ttk.Label(main, textvariable=self.detail, wraplength=1090, foreground="#526b79").pack(fill="x", pady=(5, 5))
+        ttk.Label(main, textvariable=self.detail, wraplength=1090, foreground="#526b79").grid(row=5, column=0, sticky="ew", pady=(5, 5))
         actions = ttk.Frame(main)
-        actions.pack(fill="x")
+        actions.grid(row=6, column=0, sticky="ew")
         self.select_buttons = []
         for text, command in (("Select all visible", self.select_all), ("Select none", self.select_none),
                               ("Toggle highlighted", self.toggle_highlighted), (f"Reveal in {FILE_MANAGER}", self.reveal)):
@@ -177,14 +179,22 @@ class App:
         self.notes_button.pack(side="right")
         ttk.Button(actions, text="Copy paths", command=self.copy_paths).pack(side="right", padx=(0, 6))
         bottom = ttk.Frame(main)
-        bottom.pack(fill="x", pady=(10, 6))
+        bottom.grid(row=7, column=0, sticky="ew", pady=(10, 6))
         ttk.Label(bottom, textvariable=self.selection_text, font=(TITLE_FONT, 10)).pack(side="left")
         self.delete_button = ttk.Button(bottom, text="Delete selected…", command=self.confirm_delete,
                                         style="Danger.TButton", state="disabled")
         self.delete_button.pack(side="right")
         self.progress = ttk.Progressbar(main, mode="determinate")
-        self.progress.pack(fill="x", pady=(2, 5))
-        ttk.Label(main, textvariable=self.status, wraplength=1090, foreground="#526b79").pack(fill="x")
+        self.progress.grid(row=8, column=0, sticky="ew", pady=(2, 5))
+        ttk.Label(main, textvariable=self.status, wraplength=1090, foreground="#526b79").grid(row=9, column=0, sticky="ew")
+        if IS_MAC:
+            # Reserve every fixed row before allowing the table to absorb a
+            # resize. Derive the height from the native font/widget metrics.
+            main.update_idletasks()
+            minimum_height = max(740, header.winfo_reqheight() + main.winfo_reqheight()
+                                 - table_frame.winfo_reqheight() + 120)
+            self.root.minsize(1180, minimum_height)
+            self.root.geometry(f"1180x{max(820, minimum_height)}")
 
     def add_folder(self):
         folder = filedialog.askdirectory(title="Choose a folder to scan", mustexist=True)
