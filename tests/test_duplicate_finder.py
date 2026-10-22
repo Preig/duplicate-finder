@@ -23,7 +23,7 @@ loader.exec_module(app_module)
 
 class Fixture(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='duplicate-finder-test-', dir=Path(__file__).parent)
+        self.temp = tempfile.TemporaryDirectory(prefix='duplicate-finder-test-', dir=os.environ.get('DUPLICATE_FINDER_TEST_ROOT', str(Path(__file__).parent)))
         self.folder = Path(self.temp.name)
 
     def tearDown(self):
@@ -120,7 +120,7 @@ class ScannerTests(Fixture):
         self.assertEqual(len(result.issues), 1)
 
 
-@unittest.skipUnless(os.name == 'nt', 'Windows desktop integration tests')
+@unittest.skipUnless(sys.platform in ('win32', 'darwin'), 'Desktop integration tests')
 class AppTests(Fixture):
     def setUp(self):
         super().setUp()
@@ -185,7 +185,7 @@ class AppTests(Fixture):
                 yield child
                 yield from descendants(child)
         widgets = list(descendants(dialog))
-        proceed = next(w for w in widgets if w.winfo_class() == 'TButton' and w.cget('text') == 'Move to Recycle Bin')
+        proceed = next(w for w in widgets if w.winfo_class() == 'TButton' and w.cget('text') == f'Move to {app_module.TRASH_NAME}')
         acknowledgement = next(w for w in widgets if w.winfo_class() == 'TCheckbutton')
         self.assertIn('disabled', proceed.state())
         acknowledgement.invoke()
@@ -260,7 +260,7 @@ class AppTests(Fixture):
                 f"tree={self.app.tree.winfo_geometry()}; requested={self.root.winfo_reqheight()}; scaling={self.root.tk.call('tk','scaling')}")
 
 
-@unittest.skipUnless(os.name == 'nt', 'Windows Recycle Bin integration tests')
+@unittest.skipUnless(sys.platform in ('win32', 'darwin'), 'Native Trash integration tests')
 class RecycleTests(Fixture):
     def test_only_disposable_fixture_is_recycled(self):
         target = self.write('RECYCLE-TEST-ONLY.txt', b'Temporary Duplicate Finder recycle test fixture.')

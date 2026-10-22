@@ -1,9 +1,13 @@
-DUPLICATE FINDER — Windows
+DUPLICATE FINDER — Windows and Mac
 
-START
-Double-click "Start Duplicate Finder.cmd". Keep the app files together.
-Requires Windows 10/11 and Python 3.10+ with Tkinter. No extra Python
-packages, network access, account, or upload is required to run the app.
+START — NO PYTHON NEEDED
+Download a standalone app from https://github.com/Preig/duplicate-finder/releases/latest
+Windows: extract Duplicate-Finder-Windows-x64.zip and open Duplicate Finder.exe.
+Mac: extract the Apple Silicon or Intel ZIP and open Duplicate Finder.app.
+You can drag the Mac app to Applications. Mac builds target macOS 15 or later.
+The runtime is included; no supporting software needs to be installed.
+These builds are unsigned (Mac apps are ad-hoc signed, not Apple-notarized).
+Your OS may request approval on first open.
 
 FIND AND REVIEW
 1. Add one or more folders. Subfolders are scanned too.
@@ -14,7 +18,7 @@ FIND AND REVIEW
    column links identical copies across different folders.
 4. Filter path narrows results. In Matching content view, all copies of a
    matching group remain visible. In Folder view, only matching paths show.
-5. Reveal in Explorer opens the highlighted file's location. Copy paths
+5. Reveal in Explorer / Finder opens the highlighted file's location. Copy paths
    copies highlighted rows; highlighting is separate from deletion selection.
 6. Export CSV exports ALL duplicate matches from the current results.
 
@@ -29,16 +33,16 @@ Clear the filter and use Select all visible to select every found copy.
 
 DELETE
 Delete selected opens a review dialog listing every selected path, including
-hidden selections. Cancel leaves files alone. Confirm Move to Recycle Bin to
+hidden selections. Cancel leaves files alone. Confirm Move to Recycle Bin (Windows) or Move to Trash (Mac) to
 proceed. If all copies of a match are selected, you must explicitly acknowledge
 that no scanned copy will remain in its original folder. Selecting all copies
 is supported; the app never silently chooses a file to keep.
 
 Each selected file is checked against its scan metadata and full SHA-256 hash
-before recycling. The Windows callback checks its metadata again immediately
+before recycling. The native Trash operation checks its metadata again immediately
 before deletion. Changed, unavailable, or non-recyclable files are skipped.
 There is no permanent-delete fallback. Restore files through the Windows
-Recycle Bin. Recycling a file does not free disk space until the bin is emptied.
+Recycle Bin / Trash. Recycling a file does not free disk space until the bin is emptied.
 Deleting a file in a synced folder may sync that deletion to other devices.
 
 MATCHING AND COVERAGE
@@ -54,22 +58,25 @@ in Scan notes; its issue CSV includes the complete issue list.
 
 The default folder exclusions are Windows, Program Files, Program Files (x86),
 ProgramData, AppData, $Recycle.Bin, System Volume Information, .git, node_modules,
-.venv, venv, and __pycache__. Uncheck the exclusion option to include them.
+.venv, venv, and __pycache__; Mac Trash, Spotlight, and filesystem metadata folders are also skipped. Uncheck the exclusion option to include them.
 An explicitly selected folder is scanned even if its name is on this list.
 
 Results are a snapshot, not a continuous monitor. Scan again after outside
 changes. Extra logical size counts bytes in copies beyond one copy per match.
 It is not a measurement of allocated or reclaimable disk space; compression,
-sparse files, deduplication, other unscanned hard links and the Recycle Bin can
+sparse files, deduplication, other unscanned hard links and the Recycle Bin / Trash can
 affect actual free space. Identical content may serve different purposes in
 different folders; review the full paths before deleting.
 
 FILES
 duplicate_finder.pyw  Desktop interface
 scanner.py           Matching and CSV export
-recycle.py           Windows Recycle Bin integration
+recycle.py           Windows Recycle Bin / macOS Trash integration
 Start Duplicate Finder.cmd  Launcher
 
 Windows API references:
 https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperation-setoperationflags
 https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperationprogresssink-predeleteitem
+
+DEVELOPER SOURCE
+The .pyw source and .cmd development launcher require Python. Standalone release apps do not.

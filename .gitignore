@@ -9,3 +9,7 @@ tests/duplicate-finder-test-*/
 *.log
 .env
 .env.*
+build/
+dist/
+release/
+*.spec

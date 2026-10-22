@@ -16,7 +16,8 @@ PREFIX = 64 * 1024
 SKIP_NAMES = frozenset(name.casefold() for name in (
     "$Recycle.Bin", "System Volume Information", "Windows", "Program Files",
     "Program Files (x86)", "ProgramData", "AppData", ".git", "node_modules",
-    ".venv", "venv", "__pycache__",
+    ".venv", "venv", "__pycache__", ".Trash", ".Trashes", ".Spotlight-V100",
+    ".fseventsd", ".DocumentRevisions-V100",
 ))
 # Windows OFFLINE / RECALL_ON_OPEN / RECALL_ON_DATA_ACCESS.
 CLOUD_ONLY = 0x1000 | 0x40000 | 0x400000
@@ -157,6 +158,9 @@ class Scanner:
                             s = os.lstat(entry.path)
                             if not stat.S_ISREG(s.st_mode):
                                 continue
+                            if getattr(s, "st_flags", 0) & 0x40000000:  # macOS SF_DATALESS
+                                self.result.cloud_skipped += 1
+                                continue
                             attrs = getattr(s, "st_file_attributes", 0)
                             path = normalized(entry.path)
                             if path in self._paths:
@@ -189,7 +193,8 @@ class Scanner:
         try:
             s = os.lstat(record.path)
             return (stat.S_ISREG(s.st_mode) and stamp(s) == record.signature
-                    and not getattr(s, "st_file_attributes", 0) & CLOUD_ONLY)
+                    and not getattr(s, "st_file_attributes", 0) & CLOUD_ONLY
+                    and not getattr(s, "st_flags", 0) & 0x40000000)
         except OSError:
             return False
 

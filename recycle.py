@@ -1,4 +1,4 @@
-"""Windows Recycle Bin via IFileOperation. No permanent-delete fallback.
+"""Native Windows Recycle Bin / macOS Trash. No permanent-delete fallback.
 
 Reference: Microsoft IFileOperation / IFileOperationProgressSink documentation.
 PreDeleteItem rejects operations without TSF_DELETE_RECYCLE_IF_POSSIBLE.
@@ -7,12 +7,17 @@ from __future__ import annotations
 
 import ctypes as C
 import os
+import sys
 import uuid
 
 
 def recycle_file(path: str, still_valid=lambda: True):
+    if not still_valid():
+        raise OSError("File changed since verification; skipped. Scan again.")
+    if sys.platform == "darwin":
+        return _trash_macos(path, still_valid)
     if os.name != "nt":
-        raise OSError("Recycling is supported on Windows only")
+        raise OSError("Moving files to Trash is supported on Windows and macOS only")
     from ctypes import wintypes as W
 
     HRESULT = C.c_long
@@ -146,3 +151,51 @@ def recycle_file(path: str, still_valid=lambda: True):
         if operation:
             method(operation, 2)(operation)
         ole.CoUninitialize()
+
+
+def _trash_macos(path: str, still_valid):
+    """Use NSFileManager's Trash operation; never fall back to unlink or rm."""
+    C.CDLL("/System/Library/Frameworks/Foundation.framework/Foundation")
+    objc = C.CDLL("/usr/lib/libobjc.A.dylib")
+    objc.objc_getClass.argtypes = [C.c_char_p]
+    objc.objc_getClass.restype = C.c_void_p
+    objc.sel_registerName.argtypes = [C.c_char_p]
+    objc.sel_registerName.restype = C.c_void_p
+
+    def send(target, name, restype=C.c_void_p, argtypes=(), args=()):
+        selector = objc.sel_registerName(name.encode("ascii"))
+        function = C.CFUNCTYPE(restype, C.c_void_p, C.c_void_p, *argtypes)(("objc_msgSend", objc))
+        return function(target, selector, *args)
+
+    def cls(name):
+        result = objc.objc_getClass(name.encode("ascii"))
+        if not result:
+            raise OSError(f"macOS Foundation class unavailable: {name}")
+        return result
+
+    pool = send(send(cls("NSAutoreleasePool"), "alloc"), "init")
+    if not pool:
+        raise OSError("Unable to initialize macOS Trash operation")
+    try:
+        absolute = os.path.abspath(path)
+        string = send(cls("NSString"), "stringWithUTF8String:", argtypes=(C.c_char_p,), args=(os.fsencode(absolute),))
+        url = send(cls("NSURL"), "fileURLWithPath:", argtypes=(C.c_void_p,), args=(string,))
+        manager = send(cls("NSFileManager"), "defaultManager")
+        if not string or not url or not manager:
+            raise OSError("Unable to create the macOS file reference")
+        if not still_valid():
+            raise OSError("File changed since verification; skipped. Scan again.")
+        destination, error = C.c_void_p(), C.c_void_p()
+        success = send(manager, "trashItemAtURL:resultingItemURL:error:", restype=C.c_bool,
+            argtypes=(C.c_void_p, C.POINTER(C.c_void_p), C.POINTER(C.c_void_p)),
+            args=(url, C.byref(destination), C.byref(error)))
+        if not success:
+            reason = "macOS could not move this file to Trash. The file was not permanently deleted."
+            if error.value:
+                description = send(error.value, "localizedDescription")
+                message = send(description, "UTF8String", restype=C.c_char_p)
+                if message:
+                    reason = message.decode("utf-8", "replace")
+            raise OSError(reason)
+    finally:
+        send(pool, "drain", restype=None)

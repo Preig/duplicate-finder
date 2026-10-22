@@ -1,61 +1,63 @@
 # Duplicate Finder
 
-A local Windows desktop app for finding identical files and choosing which copies to remove.
+A local **Windows and Mac desktop app** for finding identical files and choosing which copies to remove.
+
+## Download and run — no Python installation
+
+Download an app from [Releases](https://github.com/Preig/duplicate-finder/releases/latest), extract its ZIP, and open it:
+
+| Computer | Download | Open after extracting |
+| --- | --- | --- |
+| Windows 10/11, 64-bit Intel/AMD | `Duplicate-Finder-Windows-x64.zip` | `Duplicate Finder.exe` |
+| Apple Silicon Mac (M-series) | `Duplicate-Finder-macOS-Apple-Silicon.zip` | `Duplicate Finder.app` |
+| Intel Mac | `Duplicate-Finder-macOS-Intel.zip` | `Duplicate Finder.app` |
+
+The apps include Python, Tk, and the required libraries. **Users do not need Python, a package manager, or other supporting software.** On Mac you can drag the extracted app to Applications. Mac release builds target **macOS 15 (Sequoia) or later**; older releases have not been validated.
+
+These are unsigned community builds. Mac apps are ad-hoc signed, without an Apple Developer identity or Apple notarization. Windows or macOS may require approval before first launch. This project does not disable or change OS security settings.
 
 ## Features
 
-- Select one or more folders and scan their subfolders.
-- Find exact duplicates using file sizes, 64 KB samples, full SHA-256 hashes, and byte-for-byte comparison.
+- Scan one or more folders, including subfolders.
+- Find exact duplicates using size, 64 KB samples, full SHA-256 hashes, and byte-for-byte verification.
 - Group results by **matching content** or **folder**.
-- Select **none, one, several, or all** files for deletion. Selection persists across grouping and filtering.
-- Review all selected paths before moving files to the Windows Recycle Bin.
-- Explicit acknowledgement when every scanned copy in a match is selected.
-- Changed-file checks before recycling; no permanent-delete fallback.
-- Filter paths, reveal files in Explorer, copy paths, and export results or issues to CSV.
+- Choose **none, one, several, or all** files to remove; selections persist across grouping and filtering.
+- Review every selected path before sending files to **Recycle Bin on Windows** or **Trash on Mac**.
+- Explicit acknowledgement before removing every scanned copy of a match.
+- Changed-file checks before removal, with no permanent-delete fallback.
+- Reveal files in Explorer or Finder; copy paths; export results and issues to CSV.
 
-## Run
+See [INSTRUCTIONS.txt](INSTRUCTIONS.txt) for detailed controls and scan coverage.
 
-Requires **Windows 10/11** and **Python 3.10+ with Tkinter**. No additional Python packages are required.
+## Privacy and safeguards
 
-1. Use **Code → Download ZIP**, then extract the archive.
-2. Double-click **Start Duplicate Finder.cmd**.
-3. Add folders and choose **Scan folders**.
+The app runs locally without uploads, credentials, telemetry, or server requests. It scans only folders you select. CSV reports are written only where you choose to save them. Nothing is selected for removal after a scan.
 
-You can also launch from a terminal:
+Cloud-only files are skipped to avoid downloading them. Links and junctions are not followed; hard links are counted once. Common system/development folders and empty files are excluded by default. Changed or unreadable files are reported. Results are a snapshot; re-scan after outside changes.
 
-```powershell
-python duplicate_finder.pyw
-```
+Files in synced folders may also be removed from other synced devices. Trash / Recycle Bin contents still occupy storage until emptied. Extra logical size is not a guarantee of reclaimable disk space.
 
-Read [INSTRUCTIONS.txt](INSTRUCTIONS.txt) for selection controls, exclusions, scan coverage, and deletion behavior.
+## Validation and builds
 
-## Privacy and deletion behavior
+GitHub Actions builds on Windows, Apple Silicon Mac, and Intel Mac. Each release requires:
 
-The app operates locally. It does not upload files, request credentials, contact a server, or include telemetry. CSV exports are written only to the location you select.
+1. The source test suite, including native Trash / Recycle Bin tests on disposable fixtures.
+2. A standalone app test with Python environment variables removed and Python excluded from PATH.
+3. A real Tk window, exact matching, folder grouping, selection controls, and native recycling inside the bundled app.
+4. ZIP integrity validation and a published SHA-256 checksum.
 
-Nothing is selected for deletion after scanning. Deletion requires an explicit review and confirmation. Files are sent to the Recycle Bin; operations that would permanently delete a file are blocked. Files deleted from a synced folder may also be removed from other synced devices. Recycled files still occupy storage until the bin is emptied.
+Reports are included with the downloads. These checks do not replace a full manual desktop review or certify antivirus reputation, Apple notarization, or compatibility with older Mac versions.
 
-Cloud-only files are skipped to avoid downloading them. Symbolic links and directory junctions are not followed, and hard links are counted once. By default, common system and development folders and zero-byte files are excluded. Those options can be changed in the app.
+## Developers only
 
-Results are a snapshot. Re-scan after external changes. Extra logical size counts the bytes in copies beyond one per match; it does not measure guaranteed reclaimable disk space.
+Python is needed to work on the source or build the app, not to use a downloaded release. Build each target on its native OS:
 
-## Tests
-
-```powershell
+```text
+python -m pip install -r requirements-build.txt
 python -m unittest discover -s tests -v
+python scripts/build.py
 ```
 
-The suite contains 18 tests. Windows integration tests create disposable fixtures beneath the tests directory and send some of those fixtures to the Recycle Bin. They do not scan personal folders. Run on a normal Windows desktop for Recycle Bin access. Desktop and recycling tests are skipped on other operating systems.
+The tests generate disposable fixtures and send some to Trash / Recycle Bin. They do not scan personal folders. Desktop integration tests require a normal Windows or Mac desktop environment.
 
-Validation covers content matching, differing tails, a simulated hash collision, hard links, overlapping roots, exclusions, cancellation, Unicode paths, CSV export, folder grouping, selection persistence, all-copies acknowledgement, changed-file rejection, actual recycling, and widget bounds at two window sizes. Screenshot-based visual inspection has not been completed.
-
-## Project files
-
-| File | Purpose |
-| --- | --- |
-| `duplicate_finder.pyw` | Tkinter desktop interface |
-| `scanner.py` | Exact-content matching and CSV export |
-| `recycle.py` | Windows Recycle Bin integration |
-| `Start Duplicate Finder.cmd` | Windows launcher |
-| `tests/test_duplicate_finder.py` | Standard-library test suite |
-| `INSTRUCTIONS.txt` | Detailed user guide |
+The source can also be run with `python duplicate_finder.pyw`; the Windows `.cmd` launcher is retained for source development.

@@ -1,9 +1,9 @@
-"""Duplicate Finder for Windows. Run with pythonw or Start Duplicate Finder.cmd."""
+"""Duplicate Finder for Windows and macOS. Standalone releases bundle the runtime."""
 from __future__ import annotations
 
 import os
 import queue
-import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -13,6 +13,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from scanner import Scanner, ScanResult, DuplicateGroup, export_csv, export_issues
 from recycle import recycle_file
+from platform_support import FILE_MANAGER, TRASH_NAME, TITLE_FONT, UI_FONT, reveal_file
 
 
 def human(size):
@@ -59,36 +60,36 @@ class App:
     def _style(self):
         style = ttk.Style(self.root)
         style.theme_use("clam")
-        style.configure(".", font=("Segoe UI", 10), background="#f1f4f6", foreground="#1b303e")
+        style.configure(".", font=(UI_FONT, 10), background="#f1f4f6", foreground="#1b303e")
         style.configure("TButton", padding=(12, 6), background="#ffffff", borderwidth=1)
         style.map("TButton", background=[("active", "#e5edf0")])
-        style.configure("Primary.TButton", background="#087e82", foreground="white", font=("Segoe UI Semibold", 10))
+        style.configure("Primary.TButton", background="#087e82", foreground="white", font=(TITLE_FONT, 10))
         style.map("Primary.TButton", background=[("disabled", "#b8cbd0"), ("active", "#056569")])
         style.configure("Danger.TButton", background="#a63838", foreground="white")
         style.map("Danger.TButton", background=[("disabled", "#cbd1d5"), ("active", "#852c2c")])
         style.configure("Treeview", background="white", fieldbackground="white", rowheight=29, borderwidth=0)
-        style.configure("Treeview.Heading", background="#e5ecef", font=("Segoe UI Semibold", 10), padding=6)
+        style.configure("Treeview.Heading", background="#e5ecef", font=(TITLE_FONT, 10), padding=6)
         style.map("Treeview", background=[("selected", "#d4ebed")], foreground=[("selected", "#12333e")])
         style.configure("TProgressbar", background="#087e82", troughcolor="#dfe8ec", thickness=5)
 
     def _build(self):
         header = tk.Frame(self.root, bg="#102f40", padx=24, pady=16)
         header.pack(fill="x")
-        tk.Label(header, text="Duplicate Finder", bg="#102f40", fg="white", font=("Segoe UI Semibold", 24)).pack(anchor="w")
+        tk.Label(header, text="Duplicate Finder", bg="#102f40", fg="white", font=(TITLE_FONT, 24)).pack(anchor="w")
         tk.Label(header, text="Find identical files. Review every copy. Choose what goes.", bg="#102f40", fg="#c0d9e3",
-                 font=("Segoe UI", 11)).pack(anchor="w", pady=(3, 0))
+                 font=(UI_FONT, 11)).pack(anchor="w", pady=(3, 0))
         main = ttk.Frame(self.root, padding=(20, 12))
         main.pack(fill="both", expand=True)
 
         folders = ttk.Frame(main)
         folders.pack(fill="x")
-        ttk.Label(folders, text="1   CHOOSE FOLDERS", font=("Segoe UI Semibold", 10)).pack(anchor="w", pady=(0, 5))
+        ttk.Label(folders, text="1   CHOOSE FOLDERS", font=(TITLE_FONT, 10)).pack(anchor="w", pady=(0, 5))
         folder_row = ttk.Frame(folders)
         folder_row.pack(fill="x")
         list_frame = ttk.Frame(folder_row)
         list_frame.pack(side="left", fill="both", expand=True)
         self.folder_list = tk.Listbox(list_frame, height=3, bg="white", fg="#1b303e", relief="flat", borderwidth=1,
-                                      selectmode="extended", font=("Segoe UI", 10), exportselection=False)
+                                      selectmode="extended", font=(UI_FONT, 10), exportselection=False)
         folder_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.folder_list.yview)
         self.folder_list.configure(yscrollcommand=folder_scroll.set)
         self.folder_list.pack(side="left", fill="both", expand=True)
@@ -119,12 +120,12 @@ class App:
             card = tk.Frame(cards, bg="white", padx=14, pady=8)
             card.grid(row=0, column=i, sticky="ew", padx=(0, 8 if i < 3 else 0))
             cards.columnconfigure(i, weight=1)
-            tk.Label(card, text=label, bg="white", fg="#647985", font=("Segoe UI Semibold", 8)).pack(anchor="w")
-            tk.Label(card, textvariable=self.metric_values[i], bg="white", fg="#087e82", font=("Segoe UI Semibold", 21)).pack(anchor="w")
+            tk.Label(card, text=label, bg="white", fg="#647985", font=(TITLE_FONT, 8)).pack(anchor="w")
+            tk.Label(card, textvariable=self.metric_values[i], bg="white", fg="#087e82", font=(TITLE_FONT, 21)).pack(anchor="w")
 
         tools = ttk.Frame(main)
         tools.pack(fill="x", pady=(0, 6))
-        ttk.Label(tools, text="2   REVIEW", font=("Segoe UI Semibold", 10)).pack(side="left", padx=(0, 14))
+        ttk.Label(tools, text="2   REVIEW", font=(TITLE_FONT, 10)).pack(side="left", padx=(0, 14))
         ttk.Label(tools, text="Group by").pack(side="left")
         self.view_box = ttk.Combobox(tools, textvariable=self.view, values=["Matching content", "Folder"], state="readonly", width=18)
         self.view_box.pack(side="left", padx=(5, 14))
@@ -148,7 +149,7 @@ class App:
                                     ("size", 100, False), ("folder", 380, True)):
             self.tree.column(col, width=width, minwidth=width if not stretch else 160, stretch=stretch,
                              anchor="center" if col in ("mark", "match") else "w")
-        self.tree.tag_configure("group", background="#eef4f6", font=("Segoe UI Semibold", 10))
+        self.tree.tag_configure("group", background="#eef4f6", font=(TITLE_FONT, 10))
         self.tree.tag_configure("marked", foreground="#9f3030")
         yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
@@ -167,7 +168,7 @@ class App:
         actions.pack(fill="x")
         self.select_buttons = []
         for text, command in (("Select all visible", self.select_all), ("Select none", self.select_none),
-                              ("Toggle highlighted", self.toggle_highlighted), ("Reveal in Explorer", self.reveal)):
+                              ("Toggle highlighted", self.toggle_highlighted), (f"Reveal in {FILE_MANAGER}", self.reveal)):
             button = ttk.Button(actions, text=text, command=command)
             button.pack(side="left", padx=(0, 6))
             self.select_buttons.append(button)
@@ -176,7 +177,7 @@ class App:
         ttk.Button(actions, text="Copy paths", command=self.copy_paths).pack(side="right", padx=(0, 6))
         bottom = ttk.Frame(main)
         bottom.pack(fill="x", pady=(10, 6))
-        ttk.Label(bottom, textvariable=self.selection_text, font=("Segoe UI Semibold", 10)).pack(side="left")
+        ttk.Label(bottom, textvariable=self.selection_text, font=(TITLE_FONT, 10)).pack(side="left")
         self.delete_button = ttk.Button(bottom, text="Delete selected…", command=self.confirm_delete,
                                         style="Danger.TButton", state="disabled")
         self.delete_button.pack(side="right")
@@ -203,7 +204,7 @@ class App:
             "Links and junctions are not followed. Hard links are counted once. Cloud-only files are skipped. "
             "Empty files are skipped unless you include them.\n\n"
             "Extra logical size counts bytes in extra copies, not guaranteed free disk space. "
-            "Recycled files still occupy space until the Recycle Bin is emptied. "
+            "Recycled files still occupy space until Trash / Recycle Bin is emptied. "
             "Deleting synced files may also remove them from other synced devices.", parent=self.root)
 
     def set_busy(self, busy):
@@ -427,7 +428,7 @@ class App:
             if not os.path.exists(path):
                 messagebox.showinfo("File unavailable", "This file no longer exists. Scan again to refresh.", parent=self.root)
                 return
-            subprocess.Popen(["explorer.exe", "/select,", os.path.normpath(path)])
+            reveal_file(path)
 
     def export(self):
         if not self.result:
@@ -450,7 +451,7 @@ class App:
         window.geometry("850x520")
         frame = ttk.Frame(window, padding=16)
         frame.pack(fill="both", expand=True)
-        text = tk.Text(frame, wrap="word", font=("Segoe UI", 10), padx=10, pady=10)
+        text = tk.Text(frame, wrap="word", font=(UI_FONT, 10), padx=10, pady=10)
         scroll = ttk.Scrollbar(frame, command=text.yview)
         text.configure(yscrollcommand=scroll.set)
         scroll.pack(side="right", fill="y")
@@ -493,16 +494,16 @@ class App:
         frame = ttk.Frame(dialog, padding=20)
         frame.pack(fill="both", expand=True)
         total = sum(records[p][0].size for p in selected)
-        ttk.Label(frame, text=f"Delete {len(selected):,} selected files?", font=("Segoe UI Semibold", 18)).pack(anchor="w")
-        ttk.Label(frame, text=f"{human(total)} · Files will be sent to the Windows Recycle Bin.", wraplength=820).pack(anchor="w", pady=(6, 10))
+        ttk.Label(frame, text=f"Delete {len(selected):,} selected files?", font=(TITLE_FONT, 18)).pack(anchor="w")
+        ttk.Label(frame, text=f"{human(total)} · Files will be sent to {TRASH_NAME}.", wraplength=820).pack(anchor="w", pady=(6, 10))
         if all_copy_groups:
             ttk.Label(frame, text=f"ALL COPIES SELECTED in {len(all_copy_groups)} duplicate matches. "
                 "No scanned copy of those files will remain in its folder.", foreground="#a63838", wraplength=820,
-                font=("Segoe UI Semibold", 10)).pack(anchor="w", pady=(0, 8))
+                font=(TITLE_FONT, 10)).pack(anchor="w", pady=(0, 8))
         ttk.Label(frame, text="Review every path below. This list includes selections hidden by the current filter.", wraplength=820).pack(anchor="w")
         list_frame = ttk.Frame(frame)
         list_frame.pack(fill="both", expand=True, pady=8)
-        listing = tk.Text(list_frame, wrap="none", height=12, font=("Segoe UI", 10), padx=8, pady=8)
+        listing = tk.Text(list_frame, wrap="none", height=12, font=(UI_FONT, 10), padx=8, pady=8)
         scroll = ttk.Scrollbar(list_frame, command=listing.yview)
         listing.configure(yscrollcommand=scroll.set)
         listing.grid(row=0, column=0, sticky="nsew")
@@ -515,11 +516,11 @@ class App:
         listing.insert("end", "\n".join(selected))
         listing.configure(state="disabled")
         ttk.Label(frame, text="Synced-folder deletions may sync to your other devices. Recycled files occupy space until "
-            "the Recycle Bin is emptied. Files that changed or cannot be recycled will be skipped.", wraplength=820).pack(anchor="w", pady=5)
+            "Trash / Recycle Bin is emptied. Files that changed or cannot be recycled will be skipped.", wraplength=820).pack(anchor="w", pady=5)
         understood = tk.BooleanVar(value=not all_copy_groups)
         actions = ttk.Frame(frame)
         actions.pack(side="bottom", fill="x", pady=(12, 0))
-        proceed = ttk.Button(actions, text="Move to Recycle Bin", style="Danger.TButton",
+        proceed = ttk.Button(actions, text=f"Move to {TRASH_NAME}", style="Danger.TButton",
                              state="normal" if understood.get() else "disabled")
         def begin():
             dialog.destroy()
@@ -568,6 +569,10 @@ class App:
 
 
 def main():
+    if "--self-test" in sys.argv:
+        from frozen_smoke import run_self_test
+        run_self_test(App, sys.argv[sys.argv.index("--self-test") + 1])
+        return
     if os.name == "nt":
         import ctypes
         try:

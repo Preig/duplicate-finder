@@ -1,0 +1,67 @@
+name: Standalone Windows and Mac apps
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: Windows-x64
+          - os: macos-15
+            target: macOS-Apple-Silicon
+          - os: macos-15-intel
+            target: macOS-Intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Use local system-drive test fixtures on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "DUPLICATE_FINDER_TEST_ROOT=$env:LOCALAPPDATA\Temp" >> $env:GITHUB_ENV
+      - name: Install build tools
+        run: python -m pip install -r requirements-build.txt
+      - name: Test application source
+        run: python -m unittest discover -s tests -v
+      - name: Build and test bundled application without Python on PATH
+        run: python scripts/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Duplicate-Finder-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish downloads
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Publish verified standalone downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" release/* --verify-tag --title "Duplicate Finder $RELEASE_TAG — Windows and Mac" --notes "Standalone apps: no Python installation needed. Download the ZIP for Windows, Apple Silicon Mac, or Intel Mac, and extract it before opening. Each app passed source tests and a bundled-runtime test with Python removed from PATH, including exact matching, folder grouping, selection, and native Trash / Recycle Bin integration on disposable fixtures. Builds are unsigned; Mac apps are ad-hoc signed and are not Apple-notarized. SHA-256 checksums and per-platform test reports are included."
