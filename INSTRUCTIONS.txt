@@ -1,0 +1,75 @@
+DUPLICATE FINDER — Windows
+
+START
+Double-click "Start Duplicate Finder.cmd". Keep the app files together.
+Requires Windows 10/11 and Python 3.10+ with Tkinter. No extra Python
+packages, network access, account, or upload is required to run the app.
+
+FIND AND REVIEW
+1. Add one or more folders. Subfolders are scanned too.
+2. Choose a minimum size and click Scan folders. Stop cancels the scan.
+3. Switch Group by between Matching content and Folder.
+   Matching content: identical files appear together, even across folders.
+   Folder: duplicate files appear under their containing folder. The Match
+   column links identical copies across different folders.
+4. Filter path narrows results. In Matching content view, all copies of a
+   matching group remain visible. In Folder view, only matching paths show.
+5. Reveal in Explorer opens the highlighted file's location. Copy paths
+   copies highlighted rows; highlighting is separate from deletion selection.
+6. Export CSV exports ALL duplicate matches from the current results.
+
+CHOOSE NONE, ONE, SEVERAL, OR ALL
+Nothing is selected for deletion after a scan.
+Click a file's Delete? box to mark/unmark it. A group's box toggles its files.
+You can also highlight rows (Ctrl/Shift for multiple), then press Space or
+Toggle highlighted. Select all visible marks the displayed files; Select
+none clears ALL marks. Selection persists when grouping or filtering changes.
+The count tells you if any selected files are hidden by the current filter.
+Clear the filter and use Select all visible to select every found copy.
+
+DELETE
+Delete selected opens a review dialog listing every selected path, including
+hidden selections. Cancel leaves files alone. Confirm Move to Recycle Bin to
+proceed. If all copies of a match are selected, you must explicitly acknowledge
+that no scanned copy will remain in its original folder. Selecting all copies
+is supported; the app never silently chooses a file to keep.
+
+Each selected file is checked against its scan metadata and full SHA-256 hash
+before recycling. The Windows callback checks its metadata again immediately
+before deletion. Changed, unavailable, or non-recyclable files are skipped.
+There is no permanent-delete fallback. Restore files through the Windows
+Recycle Bin. Recycling a file does not free disk space until the bin is emptied.
+Deleting a file in a synced folder may sync that deletion to other devices.
+
+MATCHING AND COVERAGE
+File size -> first 64 KB -> full SHA-256 -> byte-for-byte comparison.
+Names and extensions do not determine duplicates. The default minimum is one
+byte; choose Include empty files to include zero-byte files.
+
+Hard links to the same file are counted once; symlinks and directory junctions
+are not followed. Cloud-only/offline files are skipped to avoid downloading
+them. Download needed cloud files yourself and scan again to include them.
+Permission failures and files detected changing during reading are reported
+in Scan notes; its issue CSV includes the complete issue list.
+
+The default folder exclusions are Windows, Program Files, Program Files (x86),
+ProgramData, AppData, $Recycle.Bin, System Volume Information, .git, node_modules,
+.venv, venv, and __pycache__. Uncheck the exclusion option to include them.
+An explicitly selected folder is scanned even if its name is on this list.
+
+Results are a snapshot, not a continuous monitor. Scan again after outside
+changes. Extra logical size counts bytes in copies beyond one copy per match.
+It is not a measurement of allocated or reclaimable disk space; compression,
+sparse files, deduplication, other unscanned hard links and the Recycle Bin can
+affect actual free space. Identical content may serve different purposes in
+different folders; review the full paths before deleting.
+
+FILES
+duplicate_finder.pyw  Desktop interface
+scanner.py           Matching and CSV export
+recycle.py           Windows Recycle Bin integration
+Start Duplicate Finder.cmd  Launcher
+
+Windows API references:
+https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperation-setoperationflags
+https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperationprogresssink-predeleteitem
