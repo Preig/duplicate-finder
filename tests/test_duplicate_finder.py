@@ -247,7 +247,18 @@ class AppTests(Fixture):
         self.root.deiconify()
         for width,height in [(1180,820),(980,700)]:
             self.root.geometry(f'{width}x{height}+20+20')
-            self.root.update()
+            # Cocoa delivers resize/configure events asynchronously; let the
+            # native window and its Tk children settle before checking bounds.
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                self.root.update()
+                widgets = [self.app.scan_button,self.app.tree,self.app.delete_button,self.app.progress]
+                fits = all(w.winfo_rootx()-self.root.winfo_rootx()+w.winfo_width() <= self.root.winfo_width()
+                           and w.winfo_rooty()-self.root.winfo_rooty()+w.winfo_height() <= self.root.winfo_height()
+                           for w in widgets)
+                if fits and self.app.tree.winfo_height() >= 100:
+                    break
+                time.sleep(.01)
             for widget in [self.app.scan_button,self.app.tree,self.app.delete_button,self.app.progress]:
                 x=widget.winfo_rootx()-self.root.winfo_rootx()
                 y=widget.winfo_rooty()-self.root.winfo_rooty()

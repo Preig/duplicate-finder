@@ -25,7 +25,7 @@ FIND AND REVIEW
 CHOOSE NONE, ONE, SEVERAL, OR ALL
 Nothing is selected for deletion after a scan.
 Click a file's Delete? box to mark/unmark it. A group's box toggles its files.
-You can also highlight rows (Ctrl/Shift for multiple), then press Space or
+You can also highlight rows (Ctrl/Shift on Windows, Command/Shift on Mac), then press Space or
 Toggle highlighted. Select all visible marks the displayed files; Select
 none clears ALL marks. Selection persists when grouping or filtering changes.
 The count tells you if any selected files are hidden by the current filter.
@@ -41,8 +41,8 @@ is supported; the app never silently chooses a file to keep.
 Each selected file is checked against its scan metadata and full SHA-256 hash
 before recycling. The native Trash operation checks its metadata again immediately
 before deletion. Changed, unavailable, or non-recyclable files are skipped.
-There is no permanent-delete fallback. Restore files through the Windows
-Recycle Bin / Trash. Recycling a file does not free disk space until the bin is emptied.
+There is no permanent-delete fallback. Restore files through Recycle Bin on
+Windows or Trash on Mac. Recycling a file does not free disk space until the bin is emptied.
 Deleting a file in a synced folder may sync that deletion to other devices.
 
 MATCHING AND COVERAGE
