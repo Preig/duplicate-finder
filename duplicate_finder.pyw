@@ -13,7 +13,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from scanner import Scanner, ScanResult, DuplicateGroup, export_csv, export_issues
 from recycle import recycle_file
-from platform_support import FILE_MANAGER, TRASH_NAME, TITLE_FONT, UI_FONT, reveal_file
+from platform_support import IS_MAC, FILE_MANAGER, TRASH_NAME, TITLE_FONT, UI_FONT, reveal_file
 
 
 def human(size):
@@ -32,7 +32,8 @@ class App:
         self.root = root
         root.title("Duplicate Finder")
         root.geometry("1180x820")
-        root.minsize(980, 700)
+        # Native Mac controls need a wider minimum to keep the review actions visible.
+        root.minsize(1180, 740) if IS_MAC else root.minsize(980, 700)
         root.configure(bg="#f1f4f6")
         root.protocol("WM_DELETE_WINDOW", self.close)
         self.events = queue.Queue()

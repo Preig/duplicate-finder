@@ -245,7 +245,7 @@ class AppTests(Fixture):
 
     def test_layout_controls_fit_normal_and_minimum_window(self):
         self.root.deiconify()
-        for width,height in [(1180,820),(980,700)]:
+        for width,height in [(1180,820),self.root.minsize()]:
             self.root.geometry(f'{width}x{height}+20+20')
             # Cocoa delivers resize/configure events asynchronously; let the
             # native window and its Tk children settle before checking bounds.
@@ -264,8 +264,10 @@ class AppTests(Fixture):
                 y=widget.winfo_rooty()-self.root.winfo_rooty()
                 self.assertGreaterEqual(x,0)
                 self.assertGreaterEqual(y,0)
-                self.assertLessEqual(x+widget.winfo_width(),self.root.winfo_width())
-                self.assertLessEqual(y+widget.winfo_height(),self.root.winfo_height())
+                context = (f"widget={widget.winfo_class()} geometry={widget.winfo_geometry()}; "
+                           f"window={self.root.winfo_geometry()}; minimum={self.root.minsize()}")
+                self.assertLessEqual(x+widget.winfo_width(),self.root.winfo_width(), context)
+                self.assertLessEqual(y+widget.winfo_height(),self.root.winfo_height(), context)
             self.assertGreaterEqual(self.app.tree.winfo_height(),100,
                 f"window={width}x{height}; actual={self.root.winfo_geometry()}; "
                 f"tree={self.app.tree.winfo_geometry()}; requested={self.root.winfo_reqheight()}; scaling={self.root.tk.call('tk','scaling')}")
